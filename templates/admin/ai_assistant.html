@@ -1,0 +1,285 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .ai-assistant-container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    
+    .chat-container {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        min-height: 400px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        padding: 12px;
+        border-radius: 6px;
+    }
+    
+    .message.user {
+        background: #e3f2fd;
+        margin-left: 20%;
+    }
+    
+    .message.assistant {
+        background: #fff;
+        border-left: 4px solid #1976d2;
+        margin-right: 20%;
+    }
+    
+    .message-header {
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #1976d2;
+    }
+    
+    .input-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .input-container input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .input-container button {
+        padding: 12px 24px;
+        background: #1976d2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .input-container button:hover {
+        background: #1565c0;
+    }
+    
+    .input-container button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+    
+    .example-questions {
+        background: #f0f0f0;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .example-questions h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    
+    .example-question {
+        display: inline-block;
+        margin: 5px;
+        padding: 8px 12px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    
+    .example-question:hover {
+        background: #e3f2fd;
+        border-color: #1976d2;
+    }
+    
+    .stats-data {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        font-family: monospace;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ai-assistant-container">
+    <h1>AI Analytics Assistant</h1>
+    <p>Ask questions about student performance, problem statistics, and analytics.</p>
+    
+    <div class="example-questions">
+        <h3>Example Questions:</h3>
+        <span class="example-question" onclick="askQuestion('which question has lowest correct rate')">
+            Which question has lowest correct rate?
+        </span>
+        <span class="example-question" onclick="askQuestion('which question has highest correct rate')">
+            Which question has highest correct rate?
+        </span>
+        <span class="example-question" onclick="askQuestion('show me overall statistics')">
+            Show me overall statistics
+        </span>
+        <span class="example-question" onclick="askQuestion('how many students are there')">
+            How many students are there?
+        </span>
+        <span class="example-question" onclick="askQuestion('what is the average correct rate')">
+            What is the average correct rate?
+        </span>
+    </div>
+    
+    <div class="chat-container" id="chatContainer">
+        <div class="message assistant">
+            <div class="message-header">AI Assistant</div>
+            <div>Hello! I can help you analyze student performance data. Ask me questions like "which question has lowest correct rate" or "show me overall statistics".</div>
+        </div>
+    </div>
+    
+    <div class="input-container">
+        <input type="text" id="questionInput" placeholder="Ask a question about student performance..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendQuestion()" id="sendButton">Send</button>
+    </div>
+</div>
+
+<script>
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendQuestion();
+    }
+}
+
+function askQuestion(question) {
+    document.getElementById('questionInput').value = question;
+    sendQuestion();
+}
+
+function sendQuestion() {
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    
+    if (!question) {
+        return;
+    }
+    
+    // 显示用户消息
+    addMessage('user', question);
+    
+    // 清空输入框
+    input.value = '';
+    
+    // 禁用按钮
+    const sendButton = document.getElementById('sendButton');
+    sendButton.disabled = true;
+    sendButton.textContent = 'Loading...';
+    
+    // 显示加载消息
+    const loadingId = addMessage('assistant', 'Thinking...', true);
+    
+    // 发送请求
+    fetch('{% url "admin:ai-assistant-query" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ question: question })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // 移除加载消息
+        removeMessage(loadingId);
+        
+        // 显示AI响应
+        let responseText = data.response || 'No response';
+        if (data.error) {
+            responseText = 'Error: ' + data.error;
+        }
+        
+        addMessage('assistant', responseText);
+        
+        // 如果有数据，显示数据
+        if (data.data) {
+            addDataMessage(data.data);
+        }
+    })
+    .catch(error => {
+        removeMessage(loadingId);
+        addMessage('assistant', 'Error: ' + error.message);
+    })
+    .finally(() => {
+        sendButton.disabled = false;
+        sendButton.textContent = 'Send';
+    });
+}
+
+function addMessage(role, text, isLoading = false) {
+    const container = document.getElementById('chatContainer');
+    const messageDiv = document.createElement('div');
+    const messageId = 'msg-' + Date.now();
+    messageDiv.id = messageId;
+    messageDiv.className = 'message ' + role;
+    
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    header.textContent = role === 'user' ? 'You' : 'AI Assistant';
+    
+    const content = document.createElement('div');
+    content.textContent = text;
+    
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(content);
+    container.appendChild(messageDiv);
+    
+    // 滚动到底部
+    container.scrollTop = container.scrollHeight;
+    
+    return isLoading ? messageId : null;
+}
+
+function removeMessage(messageId) {
+    const message = document.getElementById(messageId);
+    if (message) {
+        message.remove();
+    }
+}
+
+function addDataMessage(data) {
+    const container = document.getElementById('chatContainer');
+    const dataDiv = document.createElement('div');
+    dataDiv.className = 'message assistant';
+    
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    header.textContent = 'Data';
+    
+    const content = document.createElement('div');
+    content.className = 'stats-data';
+    content.textContent = JSON.stringify(data, null, 2);
+    
+    dataDiv.appendChild(header);
+    dataDiv.appendChild(content);
+    container.appendChild(dataDiv);
+    
+    // 滚动到底部
+    container.scrollTop = container.scrollHeight;
+}
+</script>
+{% endblock %}
+

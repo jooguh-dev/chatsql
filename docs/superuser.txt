@@ -1,0 +1,3 @@
+username=demo_admin
+email=demo_admin@example.com
+password=DemoPass123!

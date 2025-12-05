@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #F5F5F7; 
+  color: #1D1D1F;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "San Francisco", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 滚动条优化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300/50 rounded-full;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400/80;
+}
+
+/* React Split 基础设置 */
+.split,
+.react-split,
+.split > div {
+  height: 100%;
+}
+.split {
+  display: flex;
+}
+.split.split--vertical {
+  flex-direction: column;
+}
+
+/* --- Gutter (拖拽条) 终极修复版 --- */
+
+.gutter {
+  background-color: transparent;
+  position: relative;
+  /* 🔴 关键：层级设为最高，防止被 Monaco Editor 遮挡 */
+  z-index: 9999 !important; 
+  flex-shrink: 0;
+}
+
+/* 1. 点击热区 (Hit Area) - 隐形的宽条 */
+.gutter::after {
+  content: '';
+  position: absolute;
+  background-color: transparent; /* 平时透明 */
+  z-index: 10; /* 在视觉线之上 */
+}
+
+/* 2. 视觉线 (Visual Line) - 实际看见的细线 */
+.gutter::before {
+  content: '';
+  position: absolute;
+  background-color: transparent; /* 默认透明，保持极简 */
+  transition: background-color 0.2s ease;
+  z-index: 5;
+  pointer-events: none; /* 让鼠标事件穿透给 ::after */
+}
+
+/* 鼠标放到热区上时，视觉线变蓝 */
+.gutter:hover::before,
+.gutter:active::before {
+  background-color: #3B82F6; /* Apple Blue */
+}
+
+/* === 水平拖拽 (左右调整 Sidebar) === */
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+  /* 这里的宽度由 React Split 控制，通常是 1px，我们不强制改它，依靠 ::after 溢出 */
+}
+
+/* 热区：左右各宽出 10px，总宽约 20px */
+.gutter.gutter-horizontal::after {
+  top: 0;
+  bottom: 0;
+  left: -10px; 
+  right: -10px;
+  width: auto; 
+}
+
+/* 视觉线：居中 1px */
+.gutter.gutter-horizontal::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+/* === 垂直拖拽 (上下调整 Editor/Result) === */
+.gutter.gutter-vertical {
+  cursor: row-resize;
+}
+
+/* 热区：上下各高出 10px，总高约 20px */
+.gutter.gutter-vertical::after {
+  left: 0;
+  right: 0;
+  top: -10px;
+  bottom: -10px;
+  height: auto;
+}
+
+/* 视觉线：居中 1px */
+.gutter.gutter-vertical::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+}

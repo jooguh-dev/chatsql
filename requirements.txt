@@ -1,0 +1,7 @@
+django>=4.2
+djangorestframework
+pymysql
+cryptography
+python-dotenv
+anthropic
+django-cors-headers
